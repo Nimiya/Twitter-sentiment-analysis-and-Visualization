@@ -1,0 +1,127 @@
+from textblob import TextBlob
+import csv
+import re
+import operator
+import numpy as np
+
+tweets = []
+
+def strip_non_ascii(string):
+    ''' Returns the string without non ASCII characters'''
+    stripped = (c for c in string if 0 < ord(c) < 127)
+    return ''.join(stripped)
+
+i = open( 'newtwitter.csv', 'r' )
+with i as csvfile:
+    reader = csv.reader(csvfile, delimiter=',')
+    next(reader)
+    for row in reader:
+        tweet= dict()
+        tweet['orig'] = row[0]
+        tweet['id'] = int(row[1])
+        tweet['pubdate'] = int(row[2])
+
+if re.match(r'^RT.*', tweet['orig']):
+            continue
+
+tweet['clean'] = tweet['orig']
+tweet['clean'] = strip_non_ascii(tweet['clean'])
+tweet['clean'] = tweet['clean'].lower()
+tweet['clean'] = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', tweet['clean'])
+tweet['clean'] = re.sub(r'\babt\b', 'about', tweet['clean'])
+tweet['clean'] = re.sub(r'\bb/c\b', 'because', tweet['clean'])
+tweet['clean'] = re.sub(r'\B/c\b', 'be', tweet['clean'])
+tweet['clean'] = re.sub(r'\b4/c\b', 'before', tweet['clean'])
+tweet['clean'] = re.sub(r'\BFN/c\b', 'bye for now', tweet['clean'])
+tweet['clean'] = re.sub(r'\bgd/c\b', 'background', tweet['clean'])
+tweet['clean'] = re.sub(r'\BR/c\b', 'best regards', tweet['clean'])
+tweet['clean'] = re.sub(r'\chk/c\b', 'check', tweet['clean'])
+tweet['clean'] = re.sub(r'\cld/c\b', 'could', tweet['clean'])
+tweet['clean'] = re.sub(r'\clk/c\b', 'click', tweet['clean'])
+tweet['clean'] = re.sub(r'\cre8/c\b', 'create', tweet['clean'])
+tweet['clean'] = re.sub(r'\da/c\b', 'the', tweet['clean'])
+tweet['clean'] = re.sub(r'\F2F/c\b', 'face to face', tweet['clean'])
+tweet['clean'] = re.sub(r'\fab/c\b', 'fabulous', tweet['clean'])
+tweet['clean'] = re.sub(r'\FTL/c\b', 'for the loss', tweet['clean'])
+tweet['clean'] = re.sub(r'\FTW/c\b', 'for the win', tweet['clean'])
+tweet['clean'] = re.sub(r'\IC/c\b', 'i see', tweet['clean'])
+tweet['clean'] = re.sub(r'\TBH/c\b', 'to be honest', tweet['clean'])
+tweet['clean'] = re.sub(r'\TFTF/c\b', 'thanks for the follow', tweet['clean'])
+tweet['clean'] = re.sub(r'\B/c\b', 'be', tweet['clean'])
+tweet['clean'] = re.sub(r'\bthats\b', 'that is', tweet['clean'])
+tweet['clean'] = re.sub(r'\bive\b', 'i have', tweet['clean'])
+tweet['clean'] = re.sub(r'\bim\b', 'i am', tweet['clean'])
+tweet['clean'] = re.sub(r'\bya\b', 'yeah', tweet['clean'])
+tweet['clean'] = re.sub(r'\bcant\b', 'can not', tweet['clean'])
+tweet['clean'] = re.sub(r'\bwont\b', 'will not', tweet['clean'])
+tweet['clean'] = re.sub(r'\bid\b', 'i would', tweet['clean'])
+tweet['clean'] = re.sub(r'wtf', 'what the fuck', tweet['clean'])
+tweet['clean'] = re.sub(r'\bwth\b', 'what the hell', tweet['clean'])
+tweet['clean'] = re.sub(r'\br\b', 'are', tweet['clean'])
+tweet['clean'] = re.sub(r'\bu\b', 'you', tweet['clean'])
+tweet['clean'] = re.sub(r'\bk\b', 'OK', tweet['clean'])
+tweet['clean'] = re.sub(r'\bsux\b', 'sucks', tweet['clean'])
+tweet['clean'] = re.sub(r'\bno+\b', 'no', tweet['clean'])
+tweet['clean'] = re.sub(r'\bcoo+\b', 'cool', tweet['clean'])
+
+tweet['TextBlob'] = TextBlob(tweet['clean'])
+tweets.append(tweet)
+
+for tweet in tweets:
+    tweet['polarity'] = float(tweet['TextBlob'].sentiment.polarity)
+    tweet['subjectivity'] = float(tweet['TextBlob'].sentiment.subjectivity)
+
+if tweet['polarity'] >= 0.1:
+   tweet['sentiment'] = 'positive'
+elif tweet['polarity'] <= -0.1:
+  tweet['sentiment'] = 'negative'
+else:
+  tweet['sentiment'] = 'neutral'
+
+tweets_sorted = sorted(tweets, key=lambda k: k['polarity'])
+
+print ("\n\nTOP NEGATIVE TWEETS")
+negative_tweets = [d for d in tweets_sorted if d['sentiment'] == 'negative']
+import csv
+p=open('neg.csv','w')
+with p as csvfile:
+    fieldnames=['id','polarity','sentiment','clean','subjectivity','pubdate','orig','TextBlob']
+    writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
+writer.writeheader()
+for d in negative_tweets:
+  writer.writerows([d])
+
+for tweet in negative_tweets[0:100]:
+    print (("id=%d, polarity=%.2f, clean=%s") % (tweet['id'], tweet['polarity'], tweet['clean']))
+
+print ("\n\nTOP POSITIVE TWEETS")
+positive_tweets = [d for d in tweets_sorted if d['sentiment'] == 'positive']
+import csv
+p=open('pos.csv','w')
+with p as csvfile:
+    fieldnames=['id','polarity','sentiment','clean','subjectivity','pubdate','orig','TextBlob']
+    writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
+	
+writer.writeheader()
+for d in positive_tweets:
+  writer.writerows([d])
+
+for tweet in positive_tweets[-100:]:
+  print (("id=%d, polarity=%.2f, clean=%s") % (tweet['id'], tweet['polarity'], tweet['clean']))
+
+print ("\n\nTOP NEUTRAL TWEETS")
+neutral_tweets = [d for d in tweets_sorted if d['sentiment'] == 'neutral']
+import csv
+p=open('neu.csv','w')
+with p as csvfile:
+    fieldnames=['id','polarity','sentiment','clean','subjectivity','pubdate','orig','TextBlob']
+    writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
+	
+writer.writeheader()
+for d in neutral_tweets:
+  writer.writerows([d])
+
+for tweet in neutral_tweets[0:500]:
+  print (("id=%d, polarity=%.2f, clean=%s") % (tweet['id'], tweet['polarity'], tweet['clean']))
+
+
